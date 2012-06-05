@@ -21,6 +21,10 @@ import urllib2
 import cssutils
 from BeautifulSoup import BeautifulSoup
 from soupselect import select
+import urllib2
+import cssutils
+from BeautifulSoup import BeautifulSoup
+from soupselect import select
 
 class Pynliner(object):
     """Pynliner class"""
@@ -169,6 +173,24 @@ class Pynliner(object):
         """
         return sum(map(self._get_specificity_from_list, (s.specificity for s in rule.selectorList)))
 
+    def _apply_elem_attributes(self, elem, css_style_decleration):
+        """
+        applies some special css properties as HTML element attributes
+        """
+        css_to_attribute = {
+            'border-spacing': 'cellspacing',
+            'cell-spacing': 'cellspacing',
+            'cellspacing': 'cellspacing',
+            'cell-padding': 'cellpadding',
+            'cellpadding': 'cellpadding',
+            'width': 'width',
+            'height': 'height',
+        }
+        for property in css_style_decleration.getProperties():
+            attr_name = css_to_attribute.get(property.name, None)
+            if attr_name and not attr_name in elem:
+                elem[attr_name] = property.value.replace('px', '')
+
     def _apply_styles(self):
         """Steps through CSS rules and applies each to all the proper elements
         as @style attributes prepending any current @style attributes.
@@ -211,13 +233,15 @@ class Pynliner(object):
                 elem['style'] = u'%s; %s' % (style_declaration.cssText.replace('\n', ' '), elem['style'])
             else:
                 elem['style'] = style_declaration.cssText.replace('\n', ' ')
+            ## add some styles as properties
+            self._apply_elem_attributes(elem, style_declaration)
 
     def _get_output(self):
         """Generate Unicode string of `self.soup` and set it to `self.output`
 
         Returns self.output
         """
-        self.output = unicode(str(self.soup))
+        self.output = unicode(str(self.soup), 'utf8')
         return self.output
 
 def fromURL(url, log=None):
